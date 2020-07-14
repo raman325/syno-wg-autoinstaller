@@ -4,6 +4,12 @@
 # TODO: If DSM_VER or PACKAGE_ARCH change, delete old artifacts
 # TODO: Figure out how to persist container. Currently fails on second run (mounting /proc returns "permission denied")
 
+INSTALL_WG=1
+KEEP_BUILD_ARTIFACTS=1
+GIT_URL="https://github.com/runfalk/synology-wireguard.git"
+GIT_BRANCH="master"
+
+
 usage()
 {
     echo "Usage: syno-wg-autoinstaller.sh [OPTIONS]"
@@ -55,6 +61,11 @@ while [ "$1" != "" ]; do
     esac
 done
 
+startWireGuardInterface() {
+    echo "Starting interface $1"
+    sudo wg-quick up $1
+}
+
 SYNO_CONF="/etc.defaults/synoinfo.conf"
 SYNO_VERSION=/etc.defaults/VERSION
 
@@ -82,9 +93,6 @@ CURR_DSM_VER="$CURR_DSM_MAJOR.$CURR_DSM_MINOR"
 CURR_PACKAGE_ARCH=$(cat $SYNO_CONF | grep synobios | cut -d'"' -f 2)
 INSTALLED_WIREGUARD_PACKAGE_NAME=$(sudo synopkg list | grep WireGuard | grep -oP "[a-zA-Z0-9.-]*" | head -n 1)
 INSTALLED_WIREGUARD_VERSION=$(echo $INSTALLED_WIREGUARD_PACKAGE_NAME | grep -oP "[0-9]+[0-9.-]*")
-
-INSTALL_WG=1
-KEEP_BUILD_ARTIFACTS=1
 
 # If there is an existing container, check if it was built with expected PACKAGE_ARCH and DSM_VER. If not, schedule deletion.
 if [[ $(sudo docker ps -a | grep $WG_BUILDER_NAME | wc -l) -gt "0" ]]; then
@@ -117,15 +125,8 @@ fi
 # Set up git repo for Docker image
 mkdir -p $BASE_BUILD_PATH
 
-if [[ -z $GIT_URL ]]; then
-    GIT_URL="https://github.com/runfalk/synology-wireguard.git"
-fi
-if [[ -z $GIT_BRANCH ]]; then
-    GIT_BRANCH="master"
-fi
-
 if [[ -z $GIT_PATH ]]; then
-    GIT_PATH=$(basename $GIT_URL | awk '{print tolower($0)}' | sed 's/.git//')
+    GIT_PATH=$(basename $GIT_URL .git | awk '{print tolower($0)}')
 fi
 
 if [[ ! -d "$BASE_BUILD_PATH/$GIT_PATH" ]]; then
@@ -243,13 +244,10 @@ fi
 echo "Build complete, package created in $BASE_BUILD_PATH/"
 echo
 
-# Exit script if failure occurs so we don't do weird things to NAS
-set -e
-
 if [[ ! -z $INSTALL_WG ]]; then
     # Stop all started interfaces, then stop and uninstall WireGuard
-    WG_INTERFACES=$(sudo wg show | grep interface | sed 's/interface: //')
     if [[ $(sudo synopkg list | grep Wire | wc -l) -gt "0" ]]; then
+        WG_INTERFACES=$(sudo wg show | grep interface | sed 's/interface: //')
         if [[ ! -z $WG_INTERFACES ]]; then
             for val in $WG_INTERFACES; do
                 echo "Stopping interface $val"
@@ -264,13 +262,12 @@ if [[ ! -z $INSTALL_WG ]]; then
 
     # Install and start WireGuard package then start all interfaces that were previously started
 
-    # Special handling for installation
-    set +x
-    WG_INSTALL_FAIL_COUNT = 0
-    until [[ -z $WG_INSTALL_FAILED ]]; then
+    WG_INSTALL_FAIL_COUNT=0
+    WG_INSTALL_FAILED=1
+    until [[ -z $WG_INSTALL_FAILED ]]; do
         echo "Installing WireGuard"
         sudo synopkg install "$BASE_BUILD_PATH/WireGuard-$WIREGUARD_VERSION/WireGuard-$CURR_PACKAGE_ARCH-$WIREGUARD_VERSION.spk"
-        if [[ $? -eq "1" ]] and [[ $WG_INSTALL_FAIL_COUNT -lt 10 ]]; then
+        if [[ $? -eq "1" ]] && [[ $WG_INSTALL_FAIL_COUNT -lt 10 ]]; then
             WG_INSTALL_FAILED=1
             echo "Trying again in ten seconds"
             sleep 10
@@ -278,28 +275,39 @@ if [[ ! -z $INSTALL_WG ]]; then
         elif [[ $WG_INSTALL_FAIL_COUNT -eq 10 ]]; then
             echo "Unable to install SPK. Try downloading the SPK at this location using the DSM UI, and then do a Manual Install through Package Center. Assuming it works, you will have to start any shutdown interfaces (e.g. sudo wg-quick up wg0): $(pwd)/$BASE_BUILD_PATH/WireGuard-$WIREGUARD_VERSION/WireGuard-$CURR_PACKAGE_ARCH-$WIREGUARD_VERSION.spk"
             echo
-            exit
+            exit 1
         else
             echo "Installation Complete!"
             echo
             unset WG_INSTALL_FAILED
+            unset WG_INSTALL_FAIL_COUNT
         fi
-    set -x
-    # Continue on
+    done
 
     echo "Starting WireGuard"
     sudo synopkg start WireGuard
     if [[ ! -z $WG_INTERFACES ]]; then
         for val in $WG_INTERFACES; do
-            echo "Starting interface $val"
-            sudo wg-quick up $val
+            startWireGuardInterface $val
         done
+    else
+        WG_INTERFACES=$(ls /etc/wireguard/*.conf)
+        if [[ $(echo $WG_INTERFACES | wc -l) -gt "0" ]]; then
+            while true; do
+                read -p "No WireGuard interfaces were stopped during this run, but at least one interface definition was found in /etc/wireguard. Would you like to enable them now? [y/n] " yn
+                case $yn in
+                    [Yy]* ) for val in $WG_INTERFACES; do
+                                startWireGuardInterface $(basename $val .conf")
+                            done
+                            break;;
+                    [Nn]* ) break;;
+                    * ) echo "Please answer yes or no.";;
+                esac
+            done
+        fi
     fi
     echo
 fi
-
-# We can continue without exiting on error because the NAS stuff is done
-set +x
 
 if [[ -z $KEEP_BUILD_ARTIFACTS ]]; then
     echo "Deleting $WG_BUILDER_NAME Docker image and container..."
