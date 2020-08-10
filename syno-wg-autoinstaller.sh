@@ -21,6 +21,8 @@ usage()
     echo '  -d  | --delete-build-artifacts  Deletes all build artifacts at the'
     echo '                                  end of the script. Saves space but'
     echo '                                  increases overall time to run.'
+    echo '  -s | --keep-spk                 Retains the WireGuard SPK file that'
+    echo '                                  is built by this script.'
     echo '  -p | --git-path                 Sets the path for the repo containing'
     echo '                                  Dockerfile to build WireGuard package.'
     echo '                                  Defaults to repo name.'
@@ -39,6 +41,9 @@ while [ "$1" != "" ]; do
                                         shift
                                         ;;
         -d | --delete-build-artifacts ) unset KEEP_BUILD_ARTIFACTS
+                                        shift
+                                        ;;
+        -s | --keep-spk )               KEEP_WG_SPK=1
                                         shift
                                         ;;
         -p | --git-path )               shift
@@ -307,6 +312,11 @@ if [[ ! -z $INSTALL_WG ]]; then
         fi
     fi
     echo
+fi
+
+if [[ -z $KEEP_WG_SPK ]]; then
+    echo  "Deleting built SPK files in $BASE_BUILD_PATH/WireGuard-$WIREGUARD_VERSION/"
+    sudo rm -rf $BASE_BUILD_PATH/WireGuard-$WIREGUARD_VERSION/
 fi
 
 if [[ -z $KEEP_BUILD_ARTIFACTS ]]; then
