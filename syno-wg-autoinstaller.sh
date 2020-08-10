@@ -297,7 +297,7 @@ if [[ ! -z $INSTALL_WG ]]; then
                 read -p "No WireGuard interfaces were stopped during this run, but at least one interface definition was found in /etc/wireguard. Would you like to enable them now? [y/n] " yn
                 case $yn in
                     [Yy]* ) for val in $WG_INTERFACES; do
-                                startWireGuardInterface $(basename $val .conf")
+                                startWireGuardInterface $(basename $val ".conf")
                             done
                             break;;
                     [Nn]* ) break;;
