@@ -11,5 +11,3 @@ This script will build the latest version of WireGuard for your Synology NAS and
 
 ## Usage
 For basic usage, simply run `./syno-wg-autoinstaller.sh`. For advanced usage, run `./syno-wg-autoinstaller.sh --help` to see configuration options.
-
-NOTE: Until the parent repo (https://github.com/runfalk/synology-wireguard.git) accepts my PR, you will have to pass the following flags to `./syno-wg-autoinstaller.sh`: `-u https://github.com/raman325/synology-wireguard.git` and `-b latest_version_on_run`. The full run statement would be `./syno-wg-autoinstaller.sh -u https://github.com/raman325/synology-wireguard.git -b latest_version_on_run`
