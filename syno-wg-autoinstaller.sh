@@ -95,9 +95,9 @@ WIREGUARD_REPO_NAME="wireguard-linux-compat"
 WIREGUARD_TOOLS_REPO_NAME="wireguard-tools"
 LIBMNL_URL="https://netfilter.org/projects/libmnl/files/?C=M;O=D"
 
-WIREGUARD_VERSION=$(wget -q $BASE_WIREGUARD_URL/$WIREGUARD_REPO_NAME/refs/ -O - | grep -oP "\/$WIREGUARD_REPO_NAME\/tag\/\?h=v\K[.0-9]*" | head -n 1)
-WIREGUARD_TOOLS_VERSION=$(wget -q $BASE_WIREGUARD_URL/$WIREGUARD_TOOLS_REPO_NAME/refs/ -O - | grep -oP "\/$WIREGUARD_TOOLS_REPO_NAME\/tag\/\?h=v\K[.0-9]*" | head -n 1)
-LIBMNL_VERSION=$(wget -q $LIBMNL_URL -O - | grep -oP 'a href="libmnl-\K[0-9.]*' | head -n 1 | sed "s/.\{1\}$//")
+WIREGUARD_VERSION=$(wget --no-hsts -q $BASE_WIREGUARD_URL/$WIREGUARD_REPO_NAME/refs/ -O - | grep -oP "\/$WIREGUARD_REPO_NAME\/tag\/\?h=v\K[.0-9]*" | head -n 1)
+WIREGUARD_TOOLS_VERSION=$(wget --no-hsts -q $BASE_WIREGUARD_URL/$WIREGUARD_TOOLS_REPO_NAME/refs/ -O - | grep -oP "\/$WIREGUARD_TOOLS_REPO_NAME\/tag\/\?h=v\K[.0-9]*" | head -n 1)
+LIBMNL_VERSION=$(wget --no-hsts -q $LIBMNL_URL -O - | grep -oP 'a href="libmnl-\K[0-9.]*' | head -n 1 | sed "s/.\{1\}$//")
 CURR_DSM_MAJOR=$(cat $SYNO_VERSION | head -n 1 | cut -d'"' -f 2)
 CURR_DSM_MINOR=$(cat $SYNO_VERSION | head -n 2 | tail -n 1 | cut -d'"' -f 2)
 CURR_DSM_VER="$CURR_DSM_MAJOR.$CURR_DSM_MINOR"
