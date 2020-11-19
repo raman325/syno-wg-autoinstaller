@@ -9,9 +9,7 @@ KEEP_BUILD_ARTIFACTS=1
 GIT_URL="https://github.com/runfalk/synology-wireguard.git"
 GIT_BRANCH="master"
 
-
-usage()
-{
+usage() {
     echo "Usage: syno-wg-autoinstaller.sh [OPTIONS]"
     echo ''
     echo 'Options:'
@@ -37,32 +35,41 @@ usage()
 
 while [ "$1" != "" ]; do
     case $1 in
-        -ni | --no-install )            unset INSTALL_WG
-                                        shift
-                                        ;;
-        -d | --delete-build-artifacts ) unset KEEP_BUILD_ARTIFACTS
-                                        shift
-                                        ;;
-        -s | --keep-spk )               KEEP_WG_SPK=1
-                                        shift
-                                        ;;
-        -p | --git-path )               shift
-                                        GIT_PATH=$1
-                                        shift
-                                        ;;
-        -u | --git-url )                shift
-                                        GIT_URL=$1
-                                        shift
-                                        ;;
-        -b | --git-branch )             shift
-                                        GIT_BRANCH=$1
-                                        shift
-                                        ;;
-        -h | --help )                   usage
-                                        exit
-                                        ;;
-        * )                             usage
-                                        exit 1
+    -ni | --no-install)
+        unset INSTALL_WG
+        shift
+        ;;
+    -d | --delete-build-artifacts)
+        unset KEEP_BUILD_ARTIFACTS
+        shift
+        ;;
+    -s | --keep-spk)
+        KEEP_WG_SPK=1
+        shift
+        ;;
+    -p | --git-path)
+        shift
+        GIT_PATH=$1
+        shift
+        ;;
+    -u | --git-url)
+        shift
+        GIT_URL=$1
+        shift
+        ;;
+    -b | --git-branch)
+        shift
+        GIT_BRANCH=$1
+        shift
+        ;;
+    -h | --help)
+        usage
+        exit
+        ;;
+    *)
+        usage
+        exit 1
+        ;;
     esac
 done
 
@@ -87,7 +94,6 @@ BASE_WIREGUARD_URL="https://git.zx2c4.com"
 WIREGUARD_REPO_NAME="wireguard-linux-compat"
 WIREGUARD_TOOLS_REPO_NAME="wireguard-tools"
 LIBMNL_URL="https://netfilter.org/projects/libmnl/files/?C=M;O=D"
-
 
 WIREGUARD_VERSION=$(wget -q $BASE_WIREGUARD_URL/$WIREGUARD_REPO_NAME/refs/ -O - | grep -oP "\/$WIREGUARD_REPO_NAME\/tag\/\?h=v\K[.0-9]*" | head -n 1)
 WIREGUARD_TOOLS_VERSION=$(wget -q $BASE_WIREGUARD_URL/$WIREGUARD_TOOLS_REPO_NAME/refs/ -O - | grep -oP "\/$WIREGUARD_TOOLS_REPO_NAME\/tag\/\?h=v\K[.0-9]*" | head -n 1)
@@ -218,8 +224,11 @@ if [[ -z $EXISTING_SYNO_BUILD_CONTAINER ]]; then
             --env LIBMNL_VERSION="$LIBMNL_VERSION" \
             -v $(pwd)/$BASE_BUILD_PATH:/result_spk \
             -v $(pwd)/$BASE_BUILD_PATH/toolkit_tarballs:/toolkit_tarballs \
-            $WG_BUILDER_NAME | tee tmp.log || \
-            { echo "Docker run failed, check tmp.log for details" ; exit 1; }
+            $WG_BUILDER_NAME | tee tmp.log ||
+            {
+                echo "Docker run failed, check tmp.log for details"
+                exit 1
+            }
         echo "memneq workaround was not needed for PKG_ARCH=$CURR_PACKAGE_ARCH. Create an issue at https://github.com/runfalk/synology-wireguard/issues/new/choose to let them know."
         echo
     fi
@@ -276,7 +285,7 @@ if [[ ! -z $INSTALL_WG ]]; then
             WG_INSTALL_FAILED=1
             echo "Trying again in ten seconds"
             sleep 10
-            ((WG_INSTALL_FAIL_COUNT+=1))
+            ((WG_INSTALL_FAIL_COUNT += 1))
         elif [[ $WG_INSTALL_FAIL_COUNT -eq 10 ]]; then
             echo "Unable to install SPK. Try downloading the SPK at this location using the DSM UI, and then do a Manual Install through Package Center. Assuming it works, you will have to start any shutdown interfaces (e.g. sudo wg-quick up wg0): $(pwd)/$BASE_BUILD_PATH/WireGuard-$WIREGUARD_VERSION/WireGuard-$CURR_PACKAGE_ARCH-$WIREGUARD_VERSION.spk"
             echo
@@ -301,12 +310,14 @@ if [[ ! -z $INSTALL_WG ]]; then
             while true; do
                 read -p "No WireGuard interfaces were stopped during this run, but at least one interface definition was found in /etc/wireguard. Would you like to enable them now? [y/n] " yn
                 case $yn in
-                    [Yy]* ) for val in $WG_INTERFACES; do
-                                startWireGuardInterface $(basename $val ".conf")
-                            done
-                            break;;
-                    [Nn]* ) break;;
-                    * ) echo "Please answer yes or no.";;
+                [Yy]*)
+                    for val in $WG_INTERFACES; do
+                        startWireGuardInterface $(basename $val ".conf")
+                    done
+                    break
+                    ;;
+                [Nn]*) break ;;
+                *) echo "Please answer yes or no." ;;
                 esac
             done
         fi
@@ -315,7 +326,7 @@ if [[ ! -z $INSTALL_WG ]]; then
 fi
 
 if [[ -z $KEEP_WG_SPK ]]; then
-    echo  "Deleting built SPK files in $BASE_BUILD_PATH/WireGuard-$WIREGUARD_VERSION/"
+    echo "Deleting built SPK files in $BASE_BUILD_PATH/WireGuard-$WIREGUARD_VERSION/"
     sudo rm -rf $BASE_BUILD_PATH/WireGuard-$WIREGUARD_VERSION/
 fi
 
@@ -323,7 +334,7 @@ if [[ -z $KEEP_BUILD_ARTIFACTS ]]; then
     echo "Deleting $WG_BUILDER_NAME Docker image and container..."
     sudo docker container rm $WG_BUILDER_NAME
     sudo docker image rm $WG_BUILDER_NAME
-    echo "Deleting persisted volume `toolkit_tarballs`"
+    echo "Deleting persisted volume $(toolkit_tarballs)"
     sudo rm -rf $BASE_BUILD_PATH/toolkit_tarballs
     echo "All builder artifacts deleted"
     echo
@@ -344,4 +355,4 @@ if [[ ! -z $SWITCH_BRANCH ]]; then
     echo
 fi
 
-echo  "DONE"
+echo "DONE"
