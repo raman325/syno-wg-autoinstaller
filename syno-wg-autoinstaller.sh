@@ -149,7 +149,7 @@ else
 
     if [[ -z $GIT_CURRENT_URL ]]; then
         cd ../..
-        echo "$GIT_PATH is an existing folder that is not a Git repo. Choose a different path or rename/delete the existing folder then rerun the script."
+        echo "$BASE_BUILD_PATH/$GIT_PATH is an existing folder that is not a Git repo. Choose a different path or rename/delete the existing folder then rerun the script."
         echo
         exit
     elif [[ $GIT_CURRENT_URL == $GIT_URL ]]; then
