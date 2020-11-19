@@ -171,7 +171,7 @@ else
     else
         cd ../..
         echo "Existing Git repo found but origin URL doesn't match. Choose a different path or rename/delete the existing folder then rerun the script."
-        echo
+        echo "Folder exists at $BASE_BUILD_PATH/$GIT_PATH"
         exit
     fi
     cd ../..
